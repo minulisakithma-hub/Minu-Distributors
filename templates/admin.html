@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Portal | Minu Distributors</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header class="navbar">
+        <a href="{{ url_for('admin_dashboard') }}" class="navbar-brand">
+            <span class="brand-icon">🍫</span>
+            <div>
+                <span class="brand-title">Minu Distributors</span>
+                <span class="brand-subtitle">System Administrator Console</span>
+            </div>
+        </a>
+        <div class="nav-user">
+            <span class="user-badge" style="border-color: #E74C3C; color: #F5B7B1;">🛡️ Administrator: {{ session.get('full_name') }}</span>
+            <a href="{{ url_for('logout') }}" class="btn btn-outline-gold btn-sm">Log Out</a>
+        </div>
+    </header>
+
+    <div class="container">
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-container">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            <span>{{ message }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- System Stats Bar -->
+        <div class="stats-grid">
+            <div class="stat-box gold-edge">
+                <div class="stat-label">Pending Retailer Approvals</div>
+                <div class="stat-value">{{ stats.pending_retailers }}</div>
+                <div class="stat-sub">Awaiting Admin Verification</div>
+            </div>
+            <div class="stat-box green-edge">
+                <div class="stat-label">Active Retail Partners</div>
+                <div class="stat-value">{{ stats.active_retailers }}</div>
+                <div class="stat-sub">Authorized to Order CBL Products</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Total Registered Retailers</div>
+                <div class="stat-value">{{ stats.total_retailers }}</div>
+                <div class="stat-sub">Wholesale Client Base</div>
+            </div>
+            <div class="stat-box blue-edge">
+                <div class="stat-label">Total System Orders</div>
+                <div class="stat-value">{{ stats.total_orders }}</div>
+                <div class="stat-sub">B2B Purchase Transactions</div>
+            </div>
+        </div>
+
+        <!-- Section: Retailer Accounts Management -->
+        <div class="card">
+            <div class="card-header-styled">
+                <h3 class="card-title">Retailer Account Approvals & Access Management</h3>
+                <span style="color: var(--text-muted); font-size: 0.85rem;">Approve, Activate, or Deactivate Retailer Accounts</span>
+            </div>
+
+            {% if retailers %}
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Shop Name</th>
+                                <th>Owner Name</th>
+                                <th>Username</th>
+                                <th>Contact Phone</th>
+                                <th>Delivery Address</th>
+                                <th>Account Status</th>
+                                <th style="min-width: 200px;">Admin Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in retailers %}
+                            <tr>
+                                <td>#{{ r.id }}</td>
+                                <td><strong style="color: var(--accent-gold);">{{ r.shop_name }}</strong></td>
+                                <td>{{ r.full_name }}</td>
+                                <td><code>{{ r.username }}</code></td>
+                                <td>{{ r.phone or 'N/A' }}</td>
+                                <td style="max-width: 220px; font-size: 0.85rem;">{{ r.address or 'N/A' }}</td>
+                                <td>
+                                    {% if r.status == 'pending' %}
+                                        <span class="badge badge-pending">Pending Approval</span>
+                                    {% elif r.status == 'active' %}
+                                        <span class="badge badge-active">Active</span>
+                                    {% elif r.status == 'deactivated' %}
+                                        <span class="badge badge-deactivated">Deactivated</span>
+                                    {% else %}
+                                        <span class="badge">{{ r.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+                                        {% if r.status == 'pending' %}
+                                            <form action="{{ url_for('update_user_status', user_id=r.id) }}" method="POST" style="display: inline;">
+                                                <input type="hidden" name="status" value="active">
+                                                <button type="submit" class="btn btn-success btn-sm">Approve & Activate</button>
+                                            </form>
+                                        {% elif r.status == 'active' %}
+                                            <form action="{{ url_for('update_user_status', user_id=r.id) }}" method="POST" style="display: inline;">
+                                                <input type="hidden" name="status" value="deactivated">
+                                                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Deactivate account for {{ r.shop_name }}?');">Deactivate</button>
+                                            </form>
+                                        {% elif r.status == 'deactivated' %}
+                                            <form action="{{ url_for('update_user_status', user_id=r.id) }}" method="POST" style="display: inline;">
+                                                <input type="hidden" name="status" value="active">
+                                                <button type="submit" class="btn btn-success btn-sm">Re-activate</button>
+                                            </form>
+                                        {% endif %}
+
+                                        <!-- Delete User -->
+                                        <form action="{{ url_for('delete_user', user_id=r.id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Permanently remove this user record?');">
+                                            <button type="submit" class="btn btn-outline-gold btn-sm" style="color: #F5B7B1; border-color: #E74C3C;">Delete</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p style="text-align: center; color: var(--text-muted); padding: 2.5rem;">
+                    No retailer accounts have registered yet. Test by registering a new retailer at <a href="{{ url_for('register') }}" style="color: var(--accent-gold);">/register</a>.
+                </p>
+            {% endif %}
+        </div>
+
+        <!-- Section: Staff Accounts Oversight -->
+        <div class="card" style="margin-top: 2rem;">
+            <div class="card-header-styled">
+                <h3 class="card-title">Distributor Staff & Administrator Accounts</h3>
+                <span style="color: var(--accent-gold); font-size: 0.85rem;">Internal Roles & Security Oversight</span>
+            </div>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Staff Name</th>
+                            <th>Username</th>
+                            <th>Assigned Role</th>
+                            <th>Status</th>
+                            <th>Date Created</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in staff %}
+                        <tr>
+                            <td>#{{ s.id }}</td>
+                            <td><strong>{{ s.full_name }}</strong></td>
+                            <td><code>{{ s.username }}</code></td>
+                            <td>
+                                {% if s.role == 'admin' %}
+                                    <span class="badge badge-warning">System Administrator</span>
+                                {% elif s.role == 'store_manager' %}
+                                    <span class="badge badge-approved">Store Manager</span>
+                                {% else %}
+                                    <span class="badge">{{ s.role }}</span>
+                                {% endif %}
+                            </td>
+                            <td><span class="badge badge-active">{{ s.status }}</span></td>
+                            <td>{{ s.created_at }}</td>
+                            <td>
+                                {% if s.id != session.get('user_id') %}
+                                    <form action="{{ url_for('delete_user', user_id=s.id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Delete this staff account?');">
+                                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                    </form>
+                                {% else %}
+                                    <span style="color: var(--accent-gold); font-size: 0.8rem;">Current Session</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2026 <span>Minu Distributors</span>. Authorized B2B Distributor for Ceylon Biscuits Limited (CBL).</p>
+    </footer>
+
+</body>
+</html>

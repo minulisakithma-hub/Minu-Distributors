@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register | Minu Distributors - B2B Chocolate Portal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header class="navbar">
+        <a href="{{ url_for('login') }}" class="navbar-brand">
+            <span class="brand-icon">🍫</span>
+            <div>
+                <span class="brand-title">Minu Distributors</span>
+                <span class="brand-subtitle">Authorized CBL B2B Partner</span>
+            </div>
+        </a>
+        <div class="nav-user">
+            <a href="{{ url_for('login') }}" class="btn btn-outline-gold btn-sm">Already Registered? Sign In</a>
+        </div>
+    </header>
+
+    <!-- Main Registration Container -->
+    <main class="auth-wrapper">
+        <div class="auth-card" style="max-width: 580px;">
+            <div class="auth-header">
+                <h2>B2B Account Registration</h2>
+                <p>Register your retail store or authorized distributor staff role</p>
+            </div>
+
+            <!-- Flash Alerts -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-container">
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }}">
+                                <span>{{ message }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <!-- Registration Form -->
+            <form action="{{ url_for('register') }}" method="POST">
+                
+                <div class="form-group">
+                    <label for="role">Account Role *</label>
+                    <select id="role" name="role" class="form-control" onchange="handleRoleChange()" required>
+                        <option value="retailer" selected>Retailer (Shop Owner / B2B Buyer)</option>
+                        <option value="store_manager">Store Manager (CBL Inventory & Orders)</option>
+                        <option value="admin">System Administrator</option>
+                    </select>
+                    <small style="color: var(--accent-gold); font-size: 0.8rem; margin-top: 4px; display: block;">
+                        * Note: Retailer accounts require Admin approval before placing live orders.
+                    </small>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="full_name">Full Name *</label>
+                        <input type="text" id="full_name" name="full_name" class="form-control" placeholder="e.g. Kasun Perera" required>
+                    </div>
+
+                    <div class="form-group" id="shopNameGroup">
+                        <label for="shop_name">Shop / Business Name *</label>
+                        <input type="text" id="shop_name" name="shop_name" class="form-control" placeholder="e.g. Perera Super Grocery" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="username">Username *</label>
+                        <input type="text" id="username" name="username" class="form-control" placeholder="Choose a username" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Password *</label>
+                        <input type="password" id="password" name="password" class="form-control" placeholder="Create a strong password" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">Phone / Contact Number *</label>
+                    <input type="tel" id="phone" name="phone" class="form-control" placeholder="e.g. 077 123 4567" required>
+                </div>
+
+                <div class="form-group" id="addressGroup">
+                    <label for="address">Delivery Address / Shop Location</label>
+                    <textarea id="address" name="address" class="form-control" rows="2" placeholder="e.g. No. 45, High Level Road, Maharagama"></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block" style="margin-top: 1rem;">
+                    Submit Registration
+                </button>
+            </form>
+
+            <div style="text-align: center; margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
+                <p style="font-size: 0.9rem; color: var(--text-muted);">
+                    Already have an approved account? 
+                    <a href="{{ url_for('login') }}" style="color: var(--accent-gold); text-decoration: none; font-weight: 600;">Login Here</a>
+                </p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2026 <span>Minu Distributors</span>. Wholesale Ceylon Biscuits Limited (CBL) Distribution System.</p>
+    </footer>
+
+    <!-- Vanilla JS to toggle retailer specific fields -->
+    <script>
+        function handleRoleChange() {
+            const roleSelect = document.getElementById('role');
+            const shopGroup = document.getElementById('shopNameGroup');
+            const shopInput = document.getElementById('shop_name');
+
+            if (roleSelect.value === 'retailer') {
+                shopGroup.style.display = 'block';
+                shopInput.required = true;
+            } else {
+                shopGroup.style.display = 'none';
+                shopInput.required = false;
+            }
+        }
+        // Initialize on load
+        handleRoleChange();
+    </script>
+</body>
+</html>

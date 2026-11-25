@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retailer Portal | Minu Distributors</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <!-- Top Navigation Bar -->
+    <header class="navbar">
+        <a href="{{ url_for('retailer_dashboard') }}" class="navbar-brand">
+            <span class="brand-icon">🍫</span>
+            <div>
+                <span class="brand-title">Minu Distributors</span>
+                <span class="brand-subtitle">Retailer Portal | CBL Chocolates</span>
+            </div>
+        </a>
+        <div class="nav-user">
+            <span class="user-badge">🏬 {{ session.get('shop_name') or user.shop_name or user.full_name }}</span>
+            <a href="{{ url_for('logout') }}" class="btn btn-outline-gold btn-sm">Log Out</a>
+        </div>
+    </header>
+
+    <div class="container">
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-container">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            <span>{{ message }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Welcome Banner -->
+        <div class="card" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, #3D2721 0%, #2B1B17 100%); border-left: 5px solid var(--accent-gold);">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <h2 style="color: var(--accent-gold); margin-bottom: 0.3rem;">Welcome, {{ user.full_name }}</h2>
+                    <p style="color: var(--text-muted); font-size: 0.95rem;">
+                        <strong>Shop:</strong> {{ user.shop_name }} | <strong>Phone:</strong> {{ user.phone or 'Not Provided' }}
+                    </p>
+                </div>
+                <div>
+                    <span class="badge badge-approved" style="font-size: 0.85rem; padding: 0.4rem 0.9rem;">
+                        Status: Active Authorized Retailer
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="tabs-nav">
+            <button class="tab-btn active" onclick="switchTab(event, 'tab-catalog')">📦 Browse & Place Orders</button>
+            <button class="tab-btn" onclick="switchTab(event, 'tab-orders')">📋 Order History & Tracking ({{ orders|length }})</button>
+            <button class="tab-btn" onclick="switchTab(event, 'tab-profile')">⚙️ Manage Shop Profile</button>
+        </nav>
+
+        <!-- ================================================================== -->
+        <!-- TAB 1: PRODUCT CATALOG & ORDER PLACEMENT -->
+        <!-- ================================================================== -->
+        <section id="tab-catalog" class="tab-content active">
+            <div class="card">
+                <div class="card-header-styled">
+                    <h3 class="card-title">CBL Chocolate Wholesale Catalog</h3>
+                    <span style="color: var(--accent-gold); font-size: 0.85rem;">Official Ritzbury & Tiara Bulk Distribution</span>
+                </div>
+
+                <form action="{{ url_for('place_order') }}" method="POST" id="orderForm">
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Product Name</th>
+                                    <th>Category</th>
+                                    <th>Packaging / Box Size</th>
+                                    <th>Wholesale Price / Box</th>
+                                    <th>Live Stock</th>
+                                    <th style="width: 170px; text-align: center;">Order Boxes</th>
+                                    <th style="text-align: right;">Subtotal (LKR)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in products %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ product.name }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-pending" style="font-size: 0.72rem;">{{ product.category }}</span>
+                                    </td>
+                                    <td>{{ product.box_size }}</td>
+                                    <td style="color: var(--accent-gold); font-weight: 600;">
+                                        Rs. {{ "{:,.2f}".format(product.price_per_box) }}
+                                    </td>
+                                    <td>
+                                        {% if product.stock_boxes > 20 %}
+                                            <span class="badge badge-success">{{ product.stock_boxes }} Boxes</span>
+                                        {% elif product.stock_boxes > 0 %}
+                                            <span class="badge badge-warning">Low: {{ product.stock_boxes }}</span>
+                                        {% else %}
+                                            <span class="badge badge-danger">Out of Stock</span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="text-align: center;">
+                                        {% if product.stock_boxes > 0 %}
+                                            <div class="qty-control">
+                                                <button type="button" class="qty-btn" onclick="adjustQty({{ product.id }}, -1)">-</button>
+                                                <input type="number" 
+                                                       name="qty_{{ product.id }}" 
+                                                       id="qty_{{ product.id }}" 
+                                                       class="qty-input" 
+                                                       value="0" 
+                                                       min="0" 
+                                                       max="{{ product.stock_boxes }}" 
+                                                       data-price="{{ product.price_per_box }}" 
+                                                       oninput="calculateTotal()" readonly>
+                                                <button type="button" class="qty-btn" onclick="adjustQty({{ product.id }}, 1, {{ product.stock_boxes }})">+</button>
+                                            </div>
+                                        {% else %}
+                                            <span style="color: var(--text-muted); font-size: 0.85rem;">Unavailable</span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="text-align: right; font-weight: 600; color: var(--text-cream);">
+                                        <span id="subtotal_{{ product.id }}">0.00</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Payment Terms & Order Submission Details -->
+                    <div style="margin-top: 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+                        <div class="form-group">
+                            <label for="payment_terms">Commercial Payment Terms *</label>
+                            <select name="payment_terms" id="payment_terms" class="form-control" required>
+                                <option value="Cash on Delivery">Cash on Delivery (COD upon store drop-off)</option>
+                                <option value="30-Day Corporate Credit Invoice">30-Day Corporate Credit Invoice (Authorized B2B Account)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="notes">Special Delivery Instructions / Notes (Optional)</label>
+                            <input type="text" name="notes" id="notes" class="form-control" placeholder="e.g., Deliver before 2:00 PM">
+                        </div>
+                    </div>
+
+                    <!-- Order Total & Submit Bar -->
+                    <div class="order-summary-box">
+                        <div>
+                            <div class="grand-total-label">Estimated Grand Wholesale Total:</div>
+                            <div class="grand-total-amount">Rs. <span id="grandTotalText">0.00</span></div>
+                        </div>
+                        <div>
+                            <button type="submit" class="btn btn-primary" id="submitOrderBtn" disabled>
+                                🛒 Place Wholesale Order
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- ================================================================== -->
+        <!-- TAB 2: ORDER HISTORY & TRACKING -->
+        <!-- ================================================================== -->
+        <section id="tab-orders" class="tab-content">
+            <div class="card">
+                <div class="card-header-styled">
+                    <h3 class="card-title">Order History & Live Dispatch Tracking</h3>
+                    <span style="color: var(--text-muted); font-size: 0.85rem;">Track order lifecycle from Pending to Dispatched</span>
+                </div>
+
+                {% if orders %}
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>Order Date</th>
+                                    <th>Items Ordered</th>
+                                    <th>Payment Terms</th>
+                                    <th>Total Amount</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in orders %}
+                                {% set ord = item.order %}
+                                <tr>
+                                    <td><strong>#{{ ord.id }}</strong></td>
+                                    <td>{{ ord.order_date }}</td>
+                                    <td>
+                                        <ul style="padding-left: 1.2rem; margin: 0; font-size: 0.88rem; list-style-type: square; color: var(--text-muted);">
+                                            {% for line in item.items %}
+                                                <li>
+                                                    <span style="color: var(--text-cream);">{{ line.product_name }}</span> 
+                                                    &times; <strong>{{ line.quantity_boxes }} Boxes</strong> 
+                                                    (@ Rs. {{ "{:,.2f}".format(line.price_per_box) }})
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </td>
+                                    <td>{{ ord.payment_terms }}</td>
+                                    <td style="color: var(--accent-gold); font-weight: 700;">
+                                        Rs. {{ "{:,.2f}".format(ord.total_amount) }}
+                                    </td>
+                                    <td>
+                                        {% if ord.status == 'Pending' %}
+                                            <span class="badge badge-pending">Pending Review</span>
+                                        {% elif ord.status == 'Approved' %}
+                                            <span class="badge badge-approved">Approved</span>
+                                        {% elif ord.status == 'Dispatched' %}
+                                            <span class="badge badge-dispatched">Dispatched 🚚</span>
+                                        {% elif ord.status == 'Cancelled' %}
+                                            <span class="badge badge-cancelled">Cancelled</span>
+                                        {% elif ord.status == 'Rejected' %}
+                                            <span class="badge badge-rejected">Rejected</span>
+                                        {% else %}
+                                            <span class="badge badge-pending">{{ ord.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if ord.status == 'Pending' %}
+                                            <form action="{{ url_for('cancel_order', order_id=ord.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to cancel Order #{{ ord.id }}?');">
+                                                <button type="submit" class="btn btn-danger btn-sm">Cancel Order</button>
+                                            </form>
+                                        {% else %}
+                                            <span style="color: var(--text-muted); font-size: 0.82rem;">Locked ({{ ord.status }})</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+                        <p style="font-size: 1.1rem; margin-bottom: 1rem;">No orders placed yet.</p>
+                        <button class="btn btn-outline-gold" onclick="switchTab(null, 'tab-catalog')">
+                            Browse CBL Products to Place Your First Order
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <!-- ================================================================== -->
+        <!-- TAB 3: MANAGE SHOP PROFILE -->
+        <!-- ================================================================== -->
+        <section id="tab-profile" class="tab-content">
+            <div class="card" style="max-width: 650px; margin: 0 auto;">
+                <div class="card-header-styled">
+                    <h3 class="card-title">Manage Shop Profile & Details</h3>
+                    <span style="color: var(--accent-gold); font-size: 0.85rem;">Update Retail Business Information</span>
+                </div>
+
+                <form action="{{ url_for('update_retailer_profile') }}" method="POST">
+                    <div class="form-group">
+                        <label for="profile_full_name">Owner / Contact Person Full Name</label>
+                        <input type="text" id="profile_full_name" name="full_name" class="form-control" value="{{ user.full_name }}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="profile_shop_name">Retail Shop / Store Name</label>
+                        <input type="text" id="profile_shop_name" name="shop_name" class="form-control" value="{{ user.shop_name }}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="profile_phone">Contact Phone Number</label>
+                        <input type="tel" id="profile_phone" name="phone" class="form-control" value="{{ user.phone }}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="profile_address">Delivery Address / Shop Location</label>
+                        <textarea id="profile_address" name="address" class="form-control" rows="3" required>{{ user.address }}</textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block">
+                        Save Profile Changes
+                    </button>
+                </form>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2026 <span>Minu Distributors</span>. Authorized B2B Distributor for Ceylon Biscuits Limited (CBL).</p>
+    </footer>
+
+    <!-- JavaScript for Dynamic Quantity Controls & Tab Switching -->
+    <script>
+        // Tab switching logic
+        function switchTab(event, tabId) {
+            if (event) {
+                event.preventDefault();
+            }
+            
+            // Remove active classes
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            // Set active
+            const activeContent = document.getElementById(tabId);
+            if (activeContent) {
+                activeContent.classList.add('active');
+            }
+
+            // Highlight button
+            const buttons = document.querySelectorAll('.tab-btn');
+            buttons.forEach(btn => {
+                if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(tabId)) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+
+        // Increment / Decrement quantity
+        function adjustQty(productId, delta, maxStock = 9999) {
+            const input = document.getElementById('qty_' + productId);
+            if (!input) return;
+
+            let currentVal = parseInt(input.value) || 0;
+            let newVal = currentVal + delta;
+
+            if (newVal < 0) newVal = 0;
+            if (newVal > maxStock) newVal = maxStock;
+
+            input.value = newVal;
+            calculateTotal();
+        }
+
+        // Live calculation of subtotals and grand total
+        function calculateTotal() {
+            const qtyInputs = document.querySelectorAll('.qty-input');
+            let grandTotal = 0;
+            let totalItems = 0;
+
+            qtyInputs.forEach(input => {
+                const qty = parseInt(input.value) || 0;
+                const price = parseFloat(input.dataset.price) || 0;
+                const subtotal = qty * price;
+
+                // Update subtotal text for this row
+                const subtotalSpan = document.getElementById(input.id.replace('qty_', 'subtotal_'));
+                if (subtotalSpan) {
+                    subtotalSpan.textContent = subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                }
+
+                grandTotal += subtotal;
+                totalItems += qty;
+            });
+
+            // Update Grand Total Text
+            const grandTotalText = document.getElementById('grandTotalText');
+            if (grandTotalText) {
+                grandTotalText.textContent = grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            // Enable or disable submit button based on quantities
+            const submitBtn = document.getElementById('submitOrderBtn');
+            if (submitBtn) {
+                submitBtn.disabled = (totalItems === 0);
+            }
+        }
+
+        // Run calculation once on page load
+        document.addEventListener('DOMContentLoaded', calculateTotal);
+    </script>
+</body>
+</html>

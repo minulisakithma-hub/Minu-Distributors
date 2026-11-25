@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Minu Distributors - Authorized CBL B2B Distributor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <!-- Top Navigation Bar -->
+    <header class="navbar">
+        <a href="{{ url_for('login') }}" class="navbar-brand">
+            <span class="brand-icon">🍫</span>
+            <div>
+                <span class="brand-title">Minu Distributors</span>
+                <span class="brand-subtitle">Authorized CBL B2B Partner</span>
+            </div>
+        </a>
+        <div class="nav-user">
+            <a href="{{ url_for('register') }}" class="btn btn-outline-gold btn-sm">Register New Account</a>
+        </div>
+    </header>
+
+    <!-- Main Login Container -->
+    <main class="auth-wrapper">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h2>B2B Portal Login</h2>
+                <p>Wholesale Chocolate Distribution for Retail Partners & Staff</p>
+            </div>
+
+            <!-- Flash Alerts -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-container">
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }}">
+                                <span>{{ message }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <!-- Login Form -->
+            <form action="{{ url_for('login') }}" method="POST">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" class="form-control" placeholder="Enter your username" required autofocus>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" class="form-control" placeholder="Enter your password" required>
+                </div>
+
+                <button type="submit" class="btn btn-gold btn-block" style="margin-top: 1.5rem;">
+                    Sign In to Portal
+                </button>
+            </form>
+
+            <div style="text-align: center; margin-top: 1.75rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
+                <p style="font-size: 0.9rem; color: var(--text-muted);">
+                    New Retail Shop Owner? 
+                    <a href="{{ url_for('register') }}" style="color: var(--accent-gold); text-decoration: none; font-weight: 600;">Register Shop Here</a>
+                </p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2026 <span>Minu Distributors</span>. Sourcing authentic chocolates from Ceylon Biscuits Limited (CBL).</p>
+    </footer>
+
+</body>
+</html>
